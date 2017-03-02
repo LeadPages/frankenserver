@@ -43,7 +43,7 @@ from google.appengine.tools.devappserver2.python import stubs
 CODING_MAGIC_COMMENT_RE = re.compile('coding[:=]\s*([-\w.]+)')
 DEFAULT_ENCODING = 'ascii'
 
-_C_MODULES = frozenset(['cv', 'Crypto', 'lxml', 'numpy', 'PIL'])
+_C_MODULES = frozenset(['cv', 'Crypto', 'lxml', 'numpy', 'PIL', 'pytz'])
 
 NAME_TO_CMODULE_WHITELIST_REGEX = {
     'cv': re.compile(r'cv(\..*)?$'),
@@ -52,6 +52,7 @@ NAME_TO_CMODULE_WHITELIST_REGEX = {
     'pycrypto': re.compile(r'Crypto(\..*)?$'),
     'PIL': re.compile(r'(PIL(\..*)?|_imaging|_imagingft|_imagingmath)$'),
     'ssl': re.compile(r'_ssl$'),
+    'pytz': re.compile(r'pytz(\..*)?$'),
 }
 
 # Maps App Engine third-party library names to the Python package name for
