@@ -930,6 +930,8 @@ _WHITE_LIST_C_MODULES = [
     '_weakref',
     'zipimport',
     'zlib',
+    '_ssl',
+    '_socket',
 ]
 
 
