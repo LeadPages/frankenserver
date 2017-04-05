@@ -1,7 +1,3 @@
-# GOOGLE NOTE: this file is unchanged from
-# http://svn.python.org/view/*checkout*/python/branches/release27-maint/Lib/socket.py?revision=84603&content-type=text%2Fplain
-# except where noted with GOOGLE NOTE.
-
 # Wrapper module for _socket, providing some additional facilities
 # implemented in Python.
 
@@ -48,17 +44,16 @@ Many other constants may be defined; these may be used in calls to
 the setsockopt() and getsockopt() methods.
 """
 
-# GOOGLE NOTE: import paths changed to refer to our implementation.
-from google.appengine.api.remote_socket import _remote_socket as _socket
-from google.appengine.api.remote_socket._remote_socket import *
+import _socket
+from _socket import *
 from functools import partial
 from types import MethodType
 
 try:
     import _ssl
 except ImportError:
-    # GOOGLE NOTE: Signal to third_party libs that HTTPS is supported.
-    ssl = None
+    # no SSL support
+    pass
 else:
     def ssl(sock, keyfile=None, certfile=None):
         # we do an internal import here because the ssl
@@ -70,13 +65,30 @@ else:
 
     # we need to import the same constants we used to...
     from _ssl import SSLError as sslerror
-    from _ssl import RAND_add, RAND_egd, RAND_status, SSL_ERROR_ZERO_RETURN, SSL_ERROR_WANT_READ, SSL_ERROR_WANT_WRITE, SSL_ERROR_WANT_X509_LOOKUP, SSL_ERROR_SYSCALL, SSL_ERROR_SSL, SSL_ERROR_WANT_CONNECT, SSL_ERROR_EOF, SSL_ERROR_INVALID_ERROR_CODE
+    from _ssl import \
+         RAND_add, \
+         RAND_status, \
+         SSL_ERROR_ZERO_RETURN, \
+         SSL_ERROR_WANT_READ, \
+         SSL_ERROR_WANT_WRITE, \
+         SSL_ERROR_WANT_X509_LOOKUP, \
+         SSL_ERROR_SYSCALL, \
+         SSL_ERROR_SSL, \
+         SSL_ERROR_WANT_CONNECT, \
+         SSL_ERROR_EOF, \
+         SSL_ERROR_INVALID_ERROR_CODE
+    try:
+        from _ssl import RAND_egd
+    except ImportError:
+        # LibreSSL does not provide RAND_egd
+        pass
 
 import os, sys, warnings
 
-# GOOGLE NOTE: Use StringIO rather than cStringIO so that sockets can be
-# pickled.
-from StringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from StringIO import StringIO
 
 try:
     import errno
@@ -145,6 +157,12 @@ _socketmethods = (
     'sendall', 'setblocking',
     'settimeout', 'gettimeout', 'shutdown')
 
+if os.name == "nt":
+    _socketmethods = _socketmethods + ('ioctl',)
+
+if sys.platform == "riscos":
+    _socketmethods = _socketmethods + ('sleeptaskw',)
+
 # All the method names that must be delegated to either the real socket
 # object or the _closedsocket object.
 _delegate_methods = ("recv", "recvfrom", "recv_into", "recvfrom_into",
@@ -167,18 +185,6 @@ class _socketobject(object):
     __doc__ = _realsocket.__doc__
 
     __slots__ = ["_sock", "__weakref__"] + list(_delegate_methods)
-
-    # GOOGLE NOTE: Added to support pickling of socket objects.
-    def __getstate__(self):
-      if isinstance(self._sock, _closedsocket):
-        return None
-      return self._sock
-
-    # GOOGLE NOTE: Added to support pickling of socket objects.
-    def __setstate__(self, _sock):
-      if _sock is None:
-        _sock = _closedsocket()
-      self.__init__(_sock=_sock)
 
     def __init__(self, family=AF_INET, type=SOCK_STREAM, proto=0, _sock=None):
         if _sock is None:
@@ -317,8 +323,8 @@ class _fileobject(object):
         self._wbuf.append(data)
         self._wbuf_len += len(data)
         if (self._wbufsize == 0 or
-            self._wbufsize == 1 and '\n' in data or
-            self._wbuf_len >= self._wbufsize):
+            (self._wbufsize == 1 and '\n' in data) or
+            (self._wbufsize > 1 and self._wbuf_len >= self._wbufsize)):
             self.flush()
 
     def writelines(self, list):
@@ -543,7 +549,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
     global default timeout setting returned by :func:`getdefaulttimeout`
     is used.  If *source_address* is set it must be a tuple of (host, port)
     for the socket to bind as a source address before making the connection.
-    An host of '' or port 0 tells the OS to use the default.
+    A host of '' or port 0 tells the OS to use the default.
     """
 
     host, port = address
@@ -557,7 +563,7 @@ def create_connection(address, timeout=_GLOBAL_DEFAULT_TIMEOUT,
                 sock.settimeout(timeout)
             if source_address:
                 sock.bind(source_address)
-            sock.connect(sa, host)
+            sock.connect(sa)
             return sock
 
         except error as _:
